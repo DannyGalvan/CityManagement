@@ -1,4 +1,5 @@
 ﻿using CityProducer.Interfaces;
+using CityProducer.Models;
 using Confluent.Kafka;
 
 namespace CityProducer.Services
@@ -11,17 +12,34 @@ namespace CityProducer.Services
         {
             var producerConfig = new ProducerConfig
             {
-                BootstrapServers = configuration["Kafka:BootstrapServers"]
+                BootstrapServers = configuration["Kafka:BootstrapServers"],
             };
 
             _producer = new ProducerBuilder<string, string>(producerConfig).Build();
         }
 
-        public async Task ProduceAsync(string topic, string message)
+        public async Task<Response<DeliveryResult<string, string>>> ProduceAsync(string topic, string message)
         {
+            var response = new Response<DeliveryResult<string, string>>();
+
             var kafkaMessage = new Message<string, string> { Key = Guid.NewGuid().ToString(), Value = message };
 
-            await _producer.ProduceAsync(topic, kafkaMessage);
+            var result = await _producer.ProduceAsync(topic, kafkaMessage);
+
+            if (result.Status == PersistenceStatus.Persisted)
+            {
+                response.IsSuccess = true;
+                response.Message = "Mensaje enviado a Kafka correctamente";
+                response.Result = result;
+            }
+            else
+            {
+                response.IsSuccess = false;
+                response.Message = "Error al enviar el mensaje a Kafka";
+                response.Result = null;
+            }
+
+            return response;
         }
     }
 }

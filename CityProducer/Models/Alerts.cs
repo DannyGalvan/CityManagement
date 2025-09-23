@@ -1,6 +1,4 @@
-﻿using Confluent.Kafka;
-
-namespace CityProducer.Models
+﻿namespace CityProducer.Models
 {
     public class Alerts
     {

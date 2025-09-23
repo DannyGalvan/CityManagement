@@ -1,7 +1,10 @@
-﻿namespace CityProducer.Interfaces
+﻿using CityProducer.Models;
+using Confluent.Kafka;
+
+namespace CityProducer.Interfaces
 {
     public interface IProducerService
     {
-        Task ProduceAsync(string topic, string message);
+        Task<Response<DeliveryResult<string, string>>> ProduceAsync(string topic, string message);
     }
 }

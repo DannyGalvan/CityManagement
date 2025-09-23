@@ -1,6 +1,10 @@
 using CityProducer.Context;
 using CityProducer.Interfaces;
+using CityProducer.Models;
 using CityProducer.Services;
+using CityProducer.Validations.AlertValidators;
+using CityProducer.Validations.EventValidators;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 namespace CityProducer
@@ -23,16 +27,21 @@ namespace CityProducer
                 .Build();
 
             // Add services to the container.
-
             builder.Services.AddDbContext<DataContext>(options =>
             {
                 options.UseNpgsql(configuration.GetConnectionString("Default"));
             });
             builder.Services.AddControllers();
+            builder.Services.AddSingleton<IProducerService, ProducerService>();
+            builder.Services.AddScoped<IValidator<Alerts>, CreateAlertValidations>();
+            builder.Services.AddScoped<IValidator<Events>, CreateEventValidator>();
+            builder.Services.AddScoped<IValidator<BulkEvents>, BulkEventValidator>();
+
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-            builder.Services.AddSingleton<IProducerService,ProducerService>();
+           
 
             var app = builder.Build();
 
