@@ -1,4 +1,4 @@
-namespace CityProducer
+namespace CityConsumer
 {
     public class WeatherForecast
     {

@@ -1,3 +1,4 @@
+using CityProducer;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CityProducer.Controllers

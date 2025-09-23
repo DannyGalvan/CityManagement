@@ -1,7 +1,7 @@
-using CityProducer;
+using CityConsumer;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CityProducer.Controllers
+namespace CityConsumer.Controllers
 {
     [ApiController]
     [Route("[controller]")]
