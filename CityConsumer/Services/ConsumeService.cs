@@ -16,7 +16,7 @@ namespace CityConsumer.Services
             var consumerConfig = new ConsumerConfig
             {
                 BootstrapServers = configuration["Kafka:BootstrapServers"],
-                GroupId = "Events",
+                GroupId = Constants.GROUP_ID,
                 AutoOffsetReset = AutoOffsetReset.Earliest,
                 AllowAutoCreateTopics = true,
                 EnableAutoCommit = false,

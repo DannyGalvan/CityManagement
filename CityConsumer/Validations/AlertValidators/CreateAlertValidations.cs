@@ -1,7 +1,7 @@
-﻿using CityProducer.Models;
+﻿using CityConsumer.Models;
 using FluentValidation;
 
-namespace CityProducer.Validations.AlertValidators
+namespace CityConsumer.Validations.AlertValidators
 {
     public class CreateAlertValidations : AbstractValidator<Alerts>
     {

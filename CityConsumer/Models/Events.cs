@@ -1,4 +1,4 @@
-﻿namespace CityProducer.Models
+﻿namespace CityConsumer.Models
 {
     public class Events
     {

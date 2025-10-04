@@ -1,16 +1,16 @@
-﻿using System.Text.Json;
-using CityProducer.Interfaces;
+﻿using CityProducer.Interfaces;
 using CityProducer.Models;
 using Confluent.Kafka;
 using FluentValidation;
 using FluentValidation.Results;
 using Lombok.NET;
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
+using System.Text.Json;
 
 namespace CityProducer.Controllers
 {
     [AllArgsConstructor]
-    [Route("api/v1/[controller]")]
     [ApiController]
     public partial class EventController : ControllerBase
     {
@@ -18,6 +18,7 @@ namespace CityProducer.Controllers
         private readonly IValidator<Events> _eventValidator;
         private readonly IValidator<BulkEvents> _bulkEventValidator;
 
+        [Route("/events")]
         [HttpPost]
         public async Task<IActionResult> Post(Events events)
         {
@@ -56,7 +57,8 @@ namespace CityProducer.Controllers
             return BadRequest(result);
         }
 
-        [HttpPost("Bulk")]
+        [Route("/events/bulk")]
+        [HttpPost]
         public async Task<IActionResult> PostBulk(BulkEvents events)
         {
             var validationResult = await _bulkEventValidator.ValidateAsync(events);
@@ -96,6 +98,53 @@ namespace CityProducer.Controllers
             result.Message = "Algunos eventos no pudieron ser enviados a Kafka";
 
             return BadRequest(result);
+        }
+
+        [HttpGet]
+        [Route("/health")]
+        public IActionResult Health()
+        {
+            return Ok(new { status = "Healthy" });
+        }
+
+        [HttpGet]
+        [Route("/schema")]
+        public IActionResult Schema()
+        {
+            const string schemaJson = """
+                                      {
+                                        "$schema": "https://json-schema.org/draft/2020-12/schema",
+                                        "$id": "https://example.edu/canonical-event/1-0.schema.json",
+                                        "title": "CanonicalEventV1",
+                                        "type": "object",
+                                        "required": ["event_version","event_type","event_id","producer","source","timestamp","partition_key","geo","severity","payload"],
+                                        "properties": {
+                                          "event_version": {"type":"string","const":"1.0"},
+                                          "event_type": {"type":"string","enum":["panic.button","sensor.lpr","sensor.speed","sensor.acoustic","citizen.report"]},
+                                          "event_id": {"type":"string"},
+                                          "producer": {"type":"string"},
+                                          "source": {"type":"string","enum":["simulated"]},
+                                          "correlation_id": {"type":"string"},
+                                          "trace_id": {"type":"string"},
+                                          "timestamp": {"type":"string","format":"date-time"},
+                                          "partition_key": {"type":"string"},
+                                          "geo": {
+                                            "type":"object",
+                                            "required":["zone"],
+                                            "properties": {
+                                              "zone": {"type":"string"},
+                                              "lat": {"type":"number"},
+                                              "lon": {"type":"number"}
+                                            }
+                                          },
+                                          "severity": {"type":"string","enum":["info","warning","critical"]},
+                                          "payload": {"type":"object"}
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                      """;
+
+            return Content(schemaJson, "application/schema+json", Encoding.UTF8);
         }
     }
 }
