@@ -1,4 +1,5 @@
-﻿using CityProducer.Interfaces;
+﻿using CityProducer.Context;
+using CityProducer.Interfaces;
 using CityProducer.Models;
 using Confluent.Kafka;
 

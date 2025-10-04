@@ -1,4 +1,5 @@
-﻿using CityProducer.Interfaces;
+﻿using CityProducer.Context;
+using CityProducer.Interfaces;
 using CityProducer.Models;
 using Confluent.Kafka;
 using FluentValidation;
@@ -17,6 +18,7 @@ namespace CityProducer.Controllers
         private readonly IProducerService _producerService;
         private readonly IValidator<Events> _eventValidator;
         private readonly IValidator<BulkEvents> _bulkEventValidator;
+        private readonly DataContext    _context;
 
         [Route("/events")]
         [HttpPost]
@@ -47,6 +49,9 @@ namespace CityProducer.Controllers
 
             if (response.IsSuccess)
             {
+                _context.Events.Add(events);
+                await _context.SaveChangesAsync();
+
                 result.IsSuccess = true;
                 result.Message = "Evento enviado a Kafka correctamente";
                 return Ok(result);
@@ -89,6 +94,9 @@ namespace CityProducer.Controllers
 
             if (responses.All(r => r.IsSuccess))
             {
+                _context.Events.AddRange(events.Events!);
+                await _context.SaveChangesAsync();
+
                 result.IsSuccess = true;
                 result.Message = "Todos los eventos fueron enviados a Kafka correctamente";
                 return Ok(result);

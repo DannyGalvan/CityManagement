@@ -1,4 +1,5 @@
-﻿using CityConsumer.Models;
+﻿using CityConsumer.Interfaces;
+using CityConsumer.Models;
 using Confluent.Kafka;
 
 namespace CityConsumer.Services
@@ -9,9 +10,13 @@ namespace CityConsumer.Services
 
         private readonly ILogger<ConsumerService> _logger;
 
-        public ConsumerService(IConfiguration configuration, ILogger<ConsumerService> logger)
+        private readonly IRedisService _redisService;
+
+        public ConsumerService(IConfiguration configuration, ILogger<ConsumerService> logger, IRedisService redisService)
         {
             _logger = logger;
+
+            _redisService = redisService;
 
             var consumerConfig = new ConsumerConfig
             {
@@ -55,6 +60,10 @@ namespace CityConsumer.Services
                     var message = consumeResult.Message.Value;
 
                     _logger.LogInformation($"Evento Recibido: {message}");
+
+                    _redisService.SetStringAsync("last_event", message);
+
+                    _logger.LogInformation($"Último evento guardado en Redis: {message}");
 
                     _consumer.Commit(consumeResult);
                 }
