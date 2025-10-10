@@ -4,7 +4,7 @@ using FluentValidation;
 
 namespace CityProducer.Validations.EventValidators
 {
-    public class CreateEventValidator : AbstractValidator<Events>
+    public class CreateEventValidator : AbstractValidator<EventsRequest>
     {
         public CreateEventValidator()
         {
@@ -20,9 +20,7 @@ namespace CityProducer.Validations.EventValidators
 
             RuleFor(x => x.Producer)
                 .NotEmpty().WithMessage("El productor es obligatorio.")
-                .MaximumLength(100).WithMessage("El productor no debe exceder los 100 caracteres.")
-                .Must(producer => new[] { "artillery", "python-sim", "kafka-cli" }.Contains(producer))
-                .WithMessage("El productor debe ser uno de los siguientes: artillery, python-sim, kafka-cli.");
+                .MaximumLength(100).WithMessage("El productor no debe exceder los 100 caracteres.");
 
             RuleFor(x => x.EventType)
                 .NotEmpty().WithMessage("El tipo de evento es obligatorio.")
@@ -34,96 +32,106 @@ namespace CityProducer.Validations.EventValidators
                 .NotEmpty().WithMessage("La versión del evento es obligatoria.")
                 .Matches(@"^\d+\.\d+$").WithMessage("La versión del evento debe seguir el formato semántico (e.g., 1.0).");
 
-            RuleFor(x => x.TsUtc)
+            RuleFor(x => x.TimeStamp)
                 .LessThanOrEqualTo(DateTimeOffset.UtcNow).WithMessage("La marca de tiempo no puede ser en el futuro.");
 
-            RuleFor(x => x.Zone)
-                .NotEmpty().WithMessage("La zona es obligatoria.")
-                .MaximumLength(100).WithMessage("La zona no debe exceder los 100 caracteres.");
+            RuleFor(x => x.PartitionKey)
+                .NotEmpty().WithMessage("La clave de partición es obligatoria.")
+                .MaximumLength(100).WithMessage("La clave de partición no debe exceder los 100 caracteres."); 
+            
+            RuleFor(x => x.Geo)
+                .NotNull().WithMessage("La información geográfica es obligatoria.")
+                .DependentRules(() =>
+                {
+                    RuleFor(x => x.Geo.Lat)
+                        .InclusiveBetween(-90, 90).WithMessage("La latitud debe estar entre -90 y 90.");
+                    RuleFor(x => x.Geo.Lon)
+                        .InclusiveBetween(-180, 180).WithMessage("La longitud debe estar entre -180 y 180.");
+                    RuleFor(x => x.Geo.Zone)
+                        .NotEmpty().WithMessage("La zona es obligatoria.")
+                        .MaximumLength(100).WithMessage("La zona no debe exceder los 100 caracteres.");
+                });
 
             RuleFor(x => x.Severity)
                 .NotEmpty().WithMessage("La severidad es obligatoria.")
                 .Must(severity => new[] { "info", "warning", "critical" }.Contains(severity))
                 .WithMessage("La severidad debe ser uno de los siguientes: info, warning, critical.");
 
-            RuleFor(x => x.GeoLat)
-                .InclusiveBetween(-90, 90).WithMessage("La latitud debe estar entre -90 y 90.");
-
-            RuleFor(x => x.GeoLong)
-                .InclusiveBetween(-180, 180).WithMessage("La longitud debe estar entre -180 y 180.");
-
             RuleFor(x => x.Payload)
-                .NotNull().WithMessage("El payload no puede ser nulo.")
-                .Must(payload => payload is JsonElement).WithMessage("El payload debe ser un objeto JSON válido.")
-                .DependentRules(() =>
-                {
-                    RuleFor(x => x)
-                        .Must(x =>
-                        {
-                            var payload = (JsonElement)x.Payload!;
+                 .NotNull().WithMessage("El payload no puede ser nulo.")
+                 .DependentRules(() =>
+                 {
+                     RuleFor(x => x)
+                         .Must(x =>
+                         {
+                             // x.Payload es JsonDocument
+                             var doc = x.Payload!;
+                             var payload = doc.RootElement;
 
-                            if (x.EventType == "panic.button")
-                            {
-                                return payload.TryGetProperty("tipo_de_alerta", out var tipoDeAlerta) &&
-                                       payload.TryGetProperty("identificador_dispositivo",
-                                           out var identificadorDispositivo) &&
-                                       payload.TryGetProperty("user_context", out var userContext) &&
-                                       !string.IsNullOrEmpty(tipoDeAlerta.GetString()) &&
-                                       !string.IsNullOrEmpty(identificadorDispositivo.GetString()) &&
-                                       !string.IsNullOrEmpty(userContext.GetString()) &&
-                                       new[] { "panico", "emergencia", "incendio" }
-                                           .Contains(tipoDeAlerta.GetString()) &&
-                                       new[] { "movil", "quiosco", "web" }.Contains(userContext.GetString());
-                            }
-                            else if (x.EventType == "sensor.lpr")
-                            {
-                                return payload.TryGetProperty("placa_vehicular", out var placaVehicular) &&
-                                       payload.TryGetProperty("velocidad_estimada", out var velocidadEstimada) &&
-                                       payload.TryGetProperty("modelo_vehiculo", out var modeloVehiculo) &&
-                                       payload.TryGetProperty("color_vehiculo", out var colorVehiculo) &&
-                                       payload.TryGetProperty("ubicacion_sensor", out var ubicacionSensor) &&
-                                       !string.IsNullOrEmpty(placaVehicular.GetString()) &&
-                                       velocidadEstimada.GetInt32() > 0 &&
-                                       !string.IsNullOrEmpty(modeloVehiculo.GetString()) &&
-                                       !string.IsNullOrEmpty(colorVehiculo.GetString()) &&
-                                       !string.IsNullOrEmpty(ubicacionSensor.GetString());
-                            }
-                            else if (x.EventType == "sensor.speed")
-                            {
-                                return payload.TryGetProperty("velocidad_detectada", out var velocidadDetectada) &&
-                                       payload.TryGetProperty("sensor_id", out var sensorId) &&
-                                       payload.TryGetProperty("direccion", out var direccion) &&
-                                       velocidadDetectada.GetInt32() > 0 &&
-                                       !string.IsNullOrEmpty(sensorId.GetString()) &&
-                                       !string.IsNullOrEmpty(direccion.GetString()) &&
-                                       new[] { "NORTE", "SUR", "ESTE", "OESTE" }.Contains(direccion.GetString());
-                            }
-                            else if (x.EventType == "sensor.acoustic")
-                            {
-                                return payload.TryGetProperty("tipo_sonido_detectado", out var tipoSonidoDetectado) &&
-                                       payload.TryGetProperty("nivel_decibeles", out var nivelDecibeles) &&
-                                       payload.TryGetProperty("probabilidad_evento_critico",
-                                           out var probabilidadEventoCritico) &&
-                                       !string.IsNullOrEmpty(tipoSonidoDetectado.GetString()) &&
-                                       nivelDecibeles.GetInt32() > 0 &&
-                                       probabilidadEventoCritico.GetSingle() > 0;
-                            }
-                            else if (x.EventType == "citizen.report")
-                            {
-                                return payload.TryGetProperty("tipo_evento", out var tipoEvento) &&
-                                       payload.TryGetProperty("mensaje_descriptivo", out var mensajeDescriptivo) &&
-                                       payload.TryGetProperty("ubicacion_aproximada", out var ubicacionAproximada) &&
-                                       payload.TryGetProperty("origen", out var origen) &&
-                                       !string.IsNullOrEmpty(tipoEvento.GetString()) &&
-                                       !string.IsNullOrEmpty(mensajeDescriptivo.GetString()) &&
-                                       !string.IsNullOrEmpty(ubicacionAproximada.GetString()) &&
-                                       !string.IsNullOrEmpty(origen.GetString()) &&
-                                       new[] { "usuario", "app", "punto_fisico" }.Contains(origen.GetString());
-                            }
+                             if (payload.ValueKind != JsonValueKind.Object)
+                                 return false;
 
-                            return false;
-                        }).WithMessage("El payload del evento es inválido.");
-                }).WithMessage("El evento es inválido.");
+                             if (x.EventType == "panic.button")
+                             {
+                                 return payload.TryGetProperty("tipo_de_alerta", out var tipoDeAlerta) &&
+                                        payload.TryGetProperty("identificador_dispositivo", out var identificadorDispositivo) &&
+                                        payload.TryGetProperty("user_context", out var userContext) &&
+                                        !string.IsNullOrEmpty(tipoDeAlerta.GetString()) &&
+                                        !string.IsNullOrEmpty(identificadorDispositivo.GetString()) &&
+                                        !string.IsNullOrEmpty(userContext.GetString()) &&
+                                        new[] { "panico", "emergencia", "incendio" }.Contains(tipoDeAlerta.GetString()) &&
+                                        new[] { "movil", "quiosco", "web" }.Contains(userContext.GetString());
+                             }
+                             else if (x.EventType == "sensor.lpr")
+                             {
+                                 return payload.TryGetProperty("placa_vehicular", out var placaVehicular) &&
+                                        payload.TryGetProperty("velocidad_estimada", out var velocidadEstimada) &&
+                                        payload.TryGetProperty("modelo_vehiculo", out var modeloVehiculo) &&
+                                        payload.TryGetProperty("color_vehiculo", out var colorVehiculo) &&
+                                        payload.TryGetProperty("ubicacion_sensor", out var ubicacionSensor) &&
+                                        !string.IsNullOrEmpty(placaVehicular.GetString()) &&
+                                        (velocidadEstimada.TryGetInt32(out var vel) ? vel > 0 : false) &&
+                                        !string.IsNullOrEmpty(modeloVehiculo.GetString()) &&
+                                        !string.IsNullOrEmpty(colorVehiculo.GetString()) &&
+                                        !string.IsNullOrEmpty(ubicacionSensor.GetString());
+                             }
+                             else if (x.EventType == "sensor.speed")
+                             {
+                                 return payload.TryGetProperty("velocidad_detectada", out var velocidadDetectada) &&
+                                        payload.TryGetProperty("sensor_id", out var sensorId) &&
+                                        payload.TryGetProperty("direccion", out var direccion) &&
+                                        (velocidadDetectada.TryGetInt32(out var vel) ? vel > 0 : false) &&
+                                        !string.IsNullOrEmpty(sensorId.GetString()) &&
+                                        !string.IsNullOrEmpty(direccion.GetString()) &&
+                                        new[] { "NORTE", "SUR", "ESTE", "OESTE" }.Contains(direccion.GetString());
+                             }
+                             else if (x.EventType == "sensor.acoustic")
+                             {
+                                 return payload.TryGetProperty("tipo_sonido_detectado", out var tipoSonidoDetectado) &&
+                                        payload.TryGetProperty("nivel_decibeles", out var nivelDecibeles) &&
+                                        payload.TryGetProperty("probabilidad_evento_critico", out var probEvento) &&
+                                        !string.IsNullOrEmpty(tipoSonidoDetectado.GetString()) &&
+                                        (nivelDecibeles.TryGetInt32(out var db) ? db > 0 : false) &&
+                                        (probEvento.TryGetSingle(out var p) ? p > 0 : false);
+                             }
+                             else if (x.EventType == "citizen.report")
+                             {
+                                 return payload.TryGetProperty("tipo_evento", out var tipoEvento) &&
+                                        payload.TryGetProperty("mensaje_descriptivo", out var mensajeDescriptivo) &&
+                                        payload.TryGetProperty("ubicacion_aproximada", out var ubicacionAproximada) &&
+                                        payload.TryGetProperty("origen", out var origen) &&
+                                        !string.IsNullOrEmpty(tipoEvento.GetString()) &&
+                                        !string.IsNullOrEmpty(mensajeDescriptivo.GetString()) &&
+                                        !string.IsNullOrEmpty(ubicacionAproximada.GetString()) &&
+                                        !string.IsNullOrEmpty(origen.GetString()) &&
+                                        new[] { "usuario", "app", "punto_fisico" }.Contains(origen.GetString());
+                             }
+
+                             return false;
+                         })
+                         .WithMessage("El payload del evento es inválido.");
+                 });
+
         }
     }
 }

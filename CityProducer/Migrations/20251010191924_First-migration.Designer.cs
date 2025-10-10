@@ -3,17 +3,20 @@ using System;
 using CityProducer.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace CityConsumer.Migrations
+namespace CityProducer.Migrations
 {
-    [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(ProducerContext))]
+    [Migration("20251010191924_First-migration")]
+    partial class Firstmigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,7 +25,7 @@ namespace CityConsumer.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("CityConsumer.Models.Alerts", b =>
+            modelBuilder.Entity("CityProducer.Models.Alerts", b =>
                 {
                     b.Property<string>("AlertId")
                         .HasMaxLength(100)
@@ -40,7 +43,7 @@ namespace CityConsumer.Migrations
                         .HasColumnName("created_at");
 
                     b.Property<string>("Evidence")
-                        .HasColumnType("text")
+                        .HasColumnType("jsonb")
                         .HasColumnName("evidence");
 
                     b.Property<int>("Score")
@@ -76,7 +79,7 @@ namespace CityConsumer.Migrations
                     b.ToTable("alerts", (string)null);
                 });
 
-            modelBuilder.Entity("CityConsumer.Models.Events", b =>
+            modelBuilder.Entity("CityProducer.Models.Events", b =>
                 {
                     b.Property<string>("EventId")
                         .HasMaxLength(100)
@@ -101,12 +104,12 @@ namespace CityConsumer.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("event_version");
 
-                    b.Property<long>("GeoLat")
-                        .HasColumnType("bigint")
+                    b.Property<float>("GeoLat")
+                        .HasColumnType("real")
                         .HasColumnName("geo_lat");
 
-                    b.Property<long>("GeoLong")
-                        .HasColumnType("bigint")
+                    b.Property<float>("GeoLong")
+                        .HasColumnType("real")
                         .HasColumnName("geo_long");
 
                     b.Property<string>("PartitionKey")
@@ -116,7 +119,7 @@ namespace CityConsumer.Migrations
                         .HasColumnName("partition_key");
 
                     b.Property<string>("Payload")
-                        .HasColumnType("text")
+                        .HasColumnType("jsonb")
                         .HasColumnName("payload");
 
                     b.Property<string>("Producer")

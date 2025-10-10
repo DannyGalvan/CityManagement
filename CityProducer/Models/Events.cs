@@ -1,4 +1,6 @@
-﻿namespace CityProducer.Models
+﻿using System.Text.Json;
+
+namespace CityProducer.Models
 {
     public class Events
     {
@@ -15,6 +17,6 @@
         public float GeoLat { get; set; }
         public float GeoLong { get; set; }
         public string Severity { get; set; } = string.Empty;
-        public object? Payload { get; set; }
+        public JsonDocument? Payload { get; set; }
     }
 }

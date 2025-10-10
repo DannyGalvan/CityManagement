@@ -4,14 +4,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CityProducer.Context
 {
-    public class DataContext : DbContext
+    public class ProducerContext : DbContext
     {
-        public DataContext()
+        public ProducerContext()
         {
 
         }
 
-        public DataContext(DbContextOptions<DataContext> options) : base(options)
+        public ProducerContext(DbContextOptions<ProducerContext> options) : base(options)
         {
 
         }
@@ -77,10 +77,12 @@ namespace CityProducer.Context
                     .HasMaxLength(500)
                     .HasColumnName("zone");
                 entity.Property(e => e.Payload)
+                    .HasColumnName("payload")
+                    .HasColumnType("jsonb")
                     .HasConversion(
-                        e => JsonSerializer.Serialize(e, (JsonSerializerOptions)null),
-                        e => JsonSerializer.Deserialize<object>(e, (JsonSerializerOptions)null))
-                    .HasColumnName("payload");
+                        v => v!.RootElement.GetRawText(),                 
+                        v => JsonDocument.Parse(v, new JsonDocumentOptions())                    
+                    );
             });
             
             modelBuilder.Entity<Alerts>(entity =>
@@ -113,10 +115,12 @@ namespace CityProducer.Context
                     .HasColumnName("created_at");
 
                 entity.Property(e => e.Evidence)
+                    .HasColumnName("evidence")
+                    .HasColumnType("jsonb")
                     .HasConversion(
-                        e => JsonSerializer.Serialize(e, (JsonSerializerOptions)null),
-                        e => JsonSerializer.Deserialize<object>(e, (JsonSerializerOptions)null))
-                    .HasColumnName("evidence");
+                        v => v!.RootElement.GetRawText(),
+                        v => JsonDocument.Parse(v, new JsonDocumentOptions())
+                    );
             });
         }
     }

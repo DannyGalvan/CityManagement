@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace CityConsumer.Migrations
+namespace CityProducer.Migrations
 {
     /// <inheritdoc />
-    public partial class FirstMigration : Migration
+    public partial class Firstmigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -22,7 +22,7 @@ namespace CityConsumer.Migrations
                     zone = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     window_start = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     window_end = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    evidence = table.Column<string>(type: "text", nullable: true),
+                    evidence = table.Column<string>(type: "jsonb", nullable: true),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -44,10 +44,10 @@ namespace CityConsumer.Migrations
                     partition_key = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     ts_utc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     zone = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    geo_lat = table.Column<long>(type: "bigint", nullable: false),
-                    geo_long = table.Column<long>(type: "bigint", nullable: false),
+                    geo_lat = table.Column<float>(type: "real", nullable: false),
+                    geo_long = table.Column<float>(type: "real", nullable: false),
                     severity = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    payload = table.Column<string>(type: "text", nullable: true)
+                    payload = table.Column<string>(type: "jsonb", nullable: true)
                 },
                 constraints: table =>
                 {

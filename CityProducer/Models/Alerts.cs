@@ -1,4 +1,6 @@
-﻿namespace CityProducer.Models
+﻿using System.Text.Json;
+
+namespace CityProducer.Models
 {
     public class Alerts
     {
@@ -9,7 +11,7 @@
         public string Zone { get; set; } = string.Empty;
         public DateTimeOffset WindowStart { get; set; }
         public DateTimeOffset WindowEnd { get; set; }
-        public object? Evidence { get; set; }
+        public JsonDocument? Evidence { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
     }
 }

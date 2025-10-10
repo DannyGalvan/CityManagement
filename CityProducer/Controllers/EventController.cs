@@ -16,103 +16,187 @@ namespace CityProducer.Controllers
     public partial class EventController : ControllerBase
     {
         private readonly IProducerService _producerService;
-        private readonly IValidator<Events> _eventValidator;
+        private readonly IValidator<EventsRequest> _eventValidator;
         private readonly IValidator<BulkEvents> _bulkEventValidator;
-        private readonly DataContext    _context;
+        private readonly ProducerContext  _context;
 
         [Route("/events")]
         [HttpPost]
-        public async Task<IActionResult> Post(Events events)
+        public async Task<IActionResult> Post(EventsRequest request)
         {
-            var validationResult = await _eventValidator.ValidateAsync(events);
+            try
+            {
+                var validationResult = await _eventValidator.ValidateAsync(request);
 
-            if (!validationResult.IsValid)
+                if (!validationResult.IsValid)
+                {
+                    Response<List<ValidationFailure>> errorResponse = new Response<List<ValidationFailure>>
+                    {
+                        IsSuccess = false,
+                        Message = "Error de validación",
+                        Result = validationResult.Errors
+                    };
+
+                    return BadRequest(errorResponse);
+                }
+
+                var events = new Events
+                {
+                    EventVersion = request.EventVersion,
+                    EventType = request.EventType,
+                    EventId = request.EventId,
+                    Producer = request.Producer,
+                    Source = request.Source,
+                    CorrelationId = request.CorrelationId,
+                    TraceId = request.TraceId,
+                    TsUtc = request.TimeStamp,
+                    PartitionKey = request.PartitionKey,
+                    GeoLat = request.Geo.Lat,
+                    GeoLong = request.Geo.Lon,
+                    Zone = request.Geo.Zone,
+                    Severity = request.Severity,
+                    Payload = request.Payload
+                };
+
+                var message = JsonSerializer.Serialize(events);
+
+                var response = await _producerService.ProduceAsync(Constants.EVENTS_TOPIC, message);
+
+                Response<DeliveryResult<string, string>> result = new Response<DeliveryResult<string, string>>
+                {
+                    Result = response.Result
+                };
+
+                if (response.IsSuccess)
+                {
+                    _context.Events.Add(events);
+                    await _context.SaveChangesAsync();
+
+                    result.IsSuccess = true;
+                    result.Message = "Evento enviado a Kafka correctamente";
+                    return Ok(result);
+                }
+
+                result.IsSuccess = false;
+                result.Message = "Error al enviar el evento a Kafka";
+                return BadRequest(result);
+            }
+            catch (Exception e)
             {
                 Response<List<ValidationFailure>> errorResponse = new Response<List<ValidationFailure>>
                 {
                     IsSuccess = false,
                     Message = "Error de validación",
-                    Result = validationResult.Errors
+                    Result = [new ValidationFailure("Exception",e.Message)]
                 };
 
                 return BadRequest(errorResponse);
             }
-
-            var message = JsonSerializer.Serialize(events);
-
-            var response = await _producerService.ProduceAsync(Constants.EVENTS_TOPIC, message);
-
-            Response<DeliveryResult<string, string>> result = new Response<DeliveryResult<string, string>>
-            {
-                Result = response.Result
-            };
-
-            if (response.IsSuccess)
-            {
-                _context.Events.Add(events);
-                await _context.SaveChangesAsync();
-
-                result.IsSuccess = true;
-                result.Message = "Evento enviado a Kafka correctamente";
-                return Ok(result);
-            }
-
-            result.IsSuccess = false;
-            result.Message = "Error al enviar el evento a Kafka";
-            return BadRequest(result);
         }
 
         [Route("/events/bulk")]
         [HttpPost]
-        public async Task<IActionResult> PostBulk(BulkEvents events)
+        public async Task<IActionResult> PostBulk(BulkEvents bulkEvents)
         {
-            var validationResult = await _bulkEventValidator.ValidateAsync(events);
-            if (!validationResult.IsValid)
+            try
+            {
+                var validationResult = await _bulkEventValidator.ValidateAsync(bulkEvents);
+                if (!validationResult.IsValid)
+                {
+                    Response<List<ValidationFailure>> errorResponse = new Response<List<ValidationFailure>>
+                    {
+                        IsSuccess = false,
+                        Message = "Error de validación",
+                        Result = validationResult.Errors
+                    };
+                    return BadRequest(errorResponse);
+                }
+
+                List<Response<DeliveryResult<string, string>>> responses =
+                    new List<Response<DeliveryResult<string, string>>>();
+
+                foreach (var request in bulkEvents.Events!)
+                {
+                    var events = new Events
+                    {
+                        EventVersion = request.EventVersion,
+                        EventType = request.EventType,
+                        EventId = request.EventId,
+                        Producer = request.Producer,
+                        Source = request.Source,
+                        CorrelationId = request.CorrelationId,
+                        TraceId = request.TraceId,
+                        TsUtc = request.TimeStamp,
+                        PartitionKey = request.PartitionKey,
+                        GeoLat = request.Geo.Lat,
+                        GeoLong = request.Geo.Lon,
+                        Zone = request.Geo.Zone,
+                        Severity = request.Severity,
+                        Payload = request.Payload
+                    };
+
+                    var message = JsonSerializer.Serialize(events);
+                    var response = await _producerService.ProduceAsync(Constants.EVENTS_TOPIC, message);
+                    responses.Add(response);
+                }
+
+                Response<List<Response<DeliveryResult<string, string>>>> result =
+                    new Response<List<Response<DeliveryResult<string, string>>>>
+                    {
+                        Result = responses
+                    };
+
+                if (responses.All(r => r.IsSuccess))
+                {
+                    var events = bulkEvents.Events.Select(request => new Events
+                    {
+                        EventVersion = request.EventVersion,
+                        EventType = request.EventType,
+                        EventId = request.EventId,
+                        Producer = request.Producer,
+                        Source = request.Source,
+                        CorrelationId = request.CorrelationId,
+                        TraceId = request.TraceId,
+                        TsUtc = request.TimeStamp,
+                        PartitionKey = request.PartitionKey,
+                        GeoLat = request.Geo.Lat,
+                        GeoLong = request.Geo.Lon,
+                        Zone = request.Geo.Zone,
+                        Severity = request.Severity,
+                        Payload = request.Payload
+                    });
+
+                    _context.Events.AddRange(events);
+                    await _context.SaveChangesAsync();
+
+                    result.IsSuccess = true;
+                    result.Message = "Todos los eventos fueron enviados a Kafka correctamente";
+                    return Ok(result);
+                }
+
+                result.IsSuccess = false;
+                result.Message = "Algunos eventos no pudieron ser enviados a Kafka";
+
+                return BadRequest(result);
+            }
+            catch (Exception e)
             {
                 Response<List<ValidationFailure>> errorResponse = new Response<List<ValidationFailure>>
                 {
                     IsSuccess = false,
                     Message = "Error de validación",
-                    Result = validationResult.Errors
+                    Result = [new ValidationFailure("Exception", e.Message)]
                 };
+
                 return BadRequest(errorResponse);
             }
-
-            List<Response<DeliveryResult<string, string>>> responses = new List<Response<DeliveryResult<string, string>>>();
-
-            foreach (var singleEvent in events.Events!)
-            {
-                var message = JsonSerializer.Serialize(singleEvent);
-                var response = await _producerService.ProduceAsync(Constants.EVENTS_TOPIC, message);
-                responses.Add(response);
-            }
-
-            Response<List<Response<DeliveryResult<string, string>>>> result = new Response<List<Response<DeliveryResult<string, string>>>>
-            {
-                Result = responses
-            };
-
-            if (responses.All(r => r.IsSuccess))
-            {
-                _context.Events.AddRange(events.Events!);
-                await _context.SaveChangesAsync();
-
-                result.IsSuccess = true;
-                result.Message = "Todos los eventos fueron enviados a Kafka correctamente";
-                return Ok(result);
-            }
-
-            result.IsSuccess = false;
-            result.Message = "Algunos eventos no pudieron ser enviados a Kafka";
-
-            return BadRequest(result);
         }
 
         [HttpGet]
         [Route("/health")]
         public IActionResult Health()
         {
-            return Ok(new { status = "Healthy" });
+            return Ok(new { status = "Ok" });
         }
 
         [HttpGet]

@@ -26,13 +26,13 @@ namespace CityProducer
                 .Build();
 
             // Add services to the container.
-            builder.Services.AddDbContext<DataContext>(options =>
+            builder.Services.AddDbContext<ProducerContext>(options =>
             {
                 options.UseNpgsql(configuration.GetConnectionString("Default"));
             });
             builder.Services.AddControllers();
             builder.Services.AddSingleton<IProducerService, ProducerService>();
-            builder.Services.AddScoped<IValidator<Events>, CreateEventValidator>();
+            builder.Services.AddScoped<IValidator<EventsRequest>, CreateEventValidator>();
             builder.Services.AddScoped<IValidator<BulkEvents>, BulkEventValidator>();
 
 

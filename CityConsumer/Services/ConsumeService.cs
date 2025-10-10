@@ -1,4 +1,6 @@
-﻿using CityConsumer.Interfaces;
+﻿using System.Text.Json;
+using CityConsumer.Context;
+using CityConsumer.Interfaces;
 using CityConsumer.Models;
 using Confluent.Kafka;
 
@@ -12,7 +14,11 @@ namespace CityConsumer.Services
 
         private readonly IRedisService _redisService;
 
-        public ConsumerService(IConfiguration configuration, ILogger<ConsumerService> logger, IRedisService redisService)
+        private readonly IProducerService _producerService;
+
+        private readonly ConsumerContext _dataContext;
+
+        public ConsumerService(IConfiguration configuration, ILogger<ConsumerService> logger, IRedisService redisService, IProducerService producerService, ConsumerContext context)
         {
             _logger = logger;
 
@@ -28,6 +34,8 @@ namespace CityConsumer.Services
             };
 
             _consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
+            _producerService = producerService;
+            _dataContext = context;
         }
 
         public Task StartAsync(CancellationToken stoppingToken)
@@ -61,9 +69,58 @@ namespace CityConsumer.Services
 
                     _logger.LogInformation($"Evento Recibido: {message}");
 
-                    _redisService.SetStringAsync("last_event", message);
+                    Events? eventRequest = JsonSerializer.Deserialize<Events>(message);
 
-                    _logger.LogInformation($"Último evento guardado en Redis: {message}");
+                    if (eventRequest != null)
+                    {
+                        string? exist = ((_redisService.GetStringAsync(eventRequest.CorrelationId).Result ?? _redisService.GetStringAsync(eventRequest.Zone).Result) ??
+                                         _redisService.GetStringAsync(eventRequest.PartitionKey).Result) ??
+                                        _redisService.GetStringAsync(eventRequest.TraceId).Result;
+
+                        if (exist != null)
+                        {
+                            int score = 0;
+
+                            if (eventRequest.Severity == "warning")
+                            {
+                                score = 25;
+                            }else if (eventRequest.Severity == "info")
+                            {
+                                score = 50;
+                            } else if (eventRequest.Severity == "critical")
+                            {
+                                score = 100;
+                            }
+
+                            Alerts alert = new()
+                            {
+                                CorrelationId = eventRequest.CorrelationId,
+                                AlertId = Guid.NewGuid().ToString(),
+                                CreatedAt = DateTimeOffset.UtcNow,
+                                Type = "accident",
+                                WindowEnd = DateTimeOffset.UtcNow,
+                                WindowStart = DateTimeOffset.UtcNow,
+                                Zone = eventRequest.Zone,
+                                Score = score,
+                            };
+
+                            string alertMessage = JsonSerializer.Serialize(alert);
+
+                            _producerService.ProduceAsync(Constants.ALERTS_TOPIC, alertMessage);
+
+                            _dataContext.Alerts.Add(alert);
+                            _dataContext.SaveChanges();
+                        }
+                        else
+                        {
+                            _redisService.SetStringAsync(eventRequest.CorrelationId, message);
+                            _redisService.SetStringAsync(eventRequest.Zone, message);
+                            _redisService.SetStringAsync(eventRequest.PartitionKey, message);
+                            _redisService.SetStringAsync(eventRequest.TraceId, message);
+                        }
+
+                        _logger.LogInformation($"Último evento guardado en Redis: {message}");
+                    }
 
                     _consumer.Commit(consumeResult);
                 }

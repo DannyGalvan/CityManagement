@@ -2,6 +2,6 @@
 {
     public class BulkEvents
     {
-        public List<Events>? Events { get; set; } 
+        public List<EventsRequest>? Events { get; set; } 
     }
 }
