@@ -17,7 +17,7 @@ namespace CityProducer.Controllers
     {
         private readonly IProducerService _producerService;
         private readonly IValidator<EventsRequest> _eventValidator;
-        private readonly IValidator<BulkEvents> _bulkEventValidator;
+        private readonly IValidator<List<EventsRequest>> _bulkEventValidator;
         private readonly ProducerContext  _context;
 
         [Route("/events")]
@@ -96,7 +96,7 @@ namespace CityProducer.Controllers
 
         [Route("/events/bulk")]
         [HttpPost]
-        public async Task<IActionResult> PostBulk(BulkEvents bulkEvents)
+        public async Task<IActionResult> PostBulk(List<EventsRequest> bulkEvents)
         {
             try
             {
@@ -115,7 +115,7 @@ namespace CityProducer.Controllers
                 List<Response<DeliveryResult<string, string>>> responses =
                     new List<Response<DeliveryResult<string, string>>>();
 
-                foreach (var request in bulkEvents.Events!)
+                foreach (var request in bulkEvents)
                 {
                     var events = new Events
                     {
@@ -148,7 +148,7 @@ namespace CityProducer.Controllers
 
                 if (responses.All(r => r.IsSuccess))
                 {
-                    var events = bulkEvents.Events.Select(request => new Events
+                    var events = bulkEvents.Select(request => new Events
                     {
                         EventVersion = request.EventVersion,
                         EventType = request.EventType,

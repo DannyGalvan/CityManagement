@@ -1,0 +1,117 @@
+[
+    {
+        "event_version": "1.0",
+        "event_type": "sensor.speed",
+        "event_id": "9ab71728-f712-40b7-8152-8e4df908fe94",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "720eb888-3980-49d2-ab3d-916098cf93c1",
+        "trace_id": "e3cf62f3-03c5-4f3b-be2b-d604c5975863",
+        "timestamp": "2025-09-30T04:30:37.425255Z",
+        "partition_key": "sensor.speed",
+        "geo": {
+            "zone": "zone_4",
+            "lat": 14.626359,
+            "lon": -90.520521
+        },
+        "severity": "info",
+        "payload": {
+            "velocidad_detectada": 64,
+            "sensor_id": "SPD-017",
+            "direccion": "SUR"
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "sensor.acoustic",
+        "event_id": "0f31bfb3-cf6c-425a-82fe-661a59672a47",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "4ac6688c-fd9f-4445-9ca4-ffcf5b84d03c",
+        "trace_id": "461845ef-a376-4373-9bca-f5264fb6f210",
+        "timestamp": "2025-09-30T04:30:37.821707Z",
+        "partition_key": "sensor.acoustic",
+        "geo": {
+            "zone": "zone_4",
+            "lat": 14.623838,
+            "lon": -90.517889
+        },
+        "severity": "warning",
+        "payload": {
+            "tipo_sonido_detectado": "explosion",
+            "nivel_decibeles": 120,
+            "probabilidad_evento_critico": 0.32
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "sensor.lpr",
+        "event_id": "54456067-33be-460a-8be3-ae6e8c4c8cd5",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "ea6a90c0-de60-4717-aa82-3b0d11447502",
+        "trace_id": "a0df2f4a-2bd9-4a5b-be18-befc66488c3b",
+        "timestamp": "2025-09-30T04:30:38.208118Z",
+        "partition_key": "sensor.lpr",
+        "geo": {
+            "zone": "zone_4",
+            "lat": 14.623636,
+            "lon": -90.517746
+        },
+        "severity": "critical",
+        "payload": {
+            "placa_vehicular": "P123FRT",
+            "velocidad_estimada": 22,
+            "modelo_vehiculo": "pickup",
+            "color_vehiculo": "rojo",
+            "ubicacion_sensor": "blvd_las_americas_01"
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "panic.button",
+        "event_id": "f55473f7-edb8-4eeb-8187-3954ff9a4bc4",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "424a0ff1-e187-4811-83b0-5446d3dd035c",
+        "trace_id": "b33f2cb8-0296-433b-8972-e3b0b708593f",
+        "timestamp": "2025-09-30T04:30:40.555189Z",
+        "partition_key": "panic.button",
+        "geo": {
+            "zone": "zone_4",
+            "lat": 14.629198,
+            "lon": -90.515795
+        },
+        "severity": "warning",
+        "payload": {
+            "tipo_de_alerta": "incendio",
+            "identificador_dispositivo": "BTN-003",
+            "user_context": "quiosco"
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "sensor.lpr",
+        "event_id": "f326bcbb-e501-47e5-9195-abfc7ec0c36c",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "ea6a90c0-de60-4717-aa82-3b0d11447502",
+        "trace_id": "a0df2f4a-2bd9-4a5b-be18-befc66488c3b",
+        "timestamp": "2025-09-30T04:30:38.208118Z",
+        "partition_key": "sensor.lpr",
+        "geo": {
+            "zone": "zone_4",
+            "lat": 14.623636,
+            "lon": -90.517746
+        },
+        "severity": "critical",
+        "payload": {
+            "placa_vehicular": "P123FRT",
+            "velocidad_estimada": 22,
+            "modelo_vehiculo": "pickup",
+            "color_vehiculo": "rojo",
+            "ubicacion_sensor": "blvd_las_americas_01"
+        }
+    }
+]
+

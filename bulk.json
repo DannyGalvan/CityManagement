@@ -1,0 +1,228 @@
+[
+    {
+        "event_version": "1.0",
+        "event_type": "sensor.speed",
+        "event_id": "0a7b2b2b-7c9f-4a0e-9e4d-6f6b2b7d0e11",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "c8ff5b77-9f9a-4f5b-9a1e-1b2a3c4d5e60",
+        "trace_id": "0f4e9fcb-7b9f-4c0a-9f3b-2a1d30f9eabc",
+        "timestamp": "2025-09-30T04:31:01.102Z",
+        "partition_key": "sensor.speed",
+        "geo": {
+            "zone": "zone_3",
+            "lat": 14.620912,
+            "lon": -90.517102
+        },
+        "severity": "info",
+        "payload": {
+            "velocidad_detectada": 48,
+            "sensor_id": "SPD-021",
+            "direccion": "NORTE"
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "sensor.acoustic",
+        "event_id": "f1d0e6b1-6d29-4b9a-9b2c-2d7f1e8a1a55",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "a1b2c3d4-e5f6-47a8-9b0c-d1e2f3a4b5c6",
+        "trace_id": "5c7a9e1b-0f24-4f2a-8a45-0e9a1c2b3d4e",
+        "timestamp": "2025-09-30T04:31:03.489Z",
+        "partition_key": "sensor.acoustic",
+        "geo": {
+            "zone": "zone_2",
+            "lat": 14.618774,
+            "lon": -90.512334
+        },
+        "severity": "warning",
+        "payload": {
+            "tipo_sonido_detectado": "disparo",
+            "nivel_decibeles": 98,
+            "probabilidad_evento_critico": 0.46
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "sensor.lpr",
+        "event_id": "c5a1b3f2-9d41-4c3f-8fa0-97c8b3b5d921",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "3b7b8e3b-3e0f-4a1d-9b51-1b2c3d4e5f61",
+        "trace_id": "d4a1c2b3-e5f6-4a7b-9c0d-1e2f3a4b5c67",
+        "timestamp": "2025-09-30T04:31:05.214Z",
+        "partition_key": "sensor.lpr",
+        "geo": {
+            "zone": "zone_4",
+            "lat": 14.625112,
+            "lon": -90.519441
+        },
+        "severity": "info",
+        "payload": {
+            "placa_vehicular": "P789GHK",
+            "velocidad_estimada": 38,
+            "modelo_vehiculo": "sedan",
+            "color_vehiculo": "azul",
+            "ubicacion_sensor": "blvd_las_americas_02"
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "panic.button",
+        "event_id": "0e2f7c31-0b31-4c8c-9f2b-3e4d5f6a7b8c",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "b8c7d6e5-f4a3-42b1-9c0d-e1f2a3b4c5d6",
+        "trace_id": "1a2b3c4d-5e6f-4708-9a0b-1c2d3e4f5a6b",
+        "timestamp": "2025-09-30T04:31:06.907Z",
+        "partition_key": "panic.button",
+        "geo": {
+            "zone": "zone_1",
+            "lat": 14.631204,
+            "lon": -90.516781
+        },
+        "severity": "critical",
+        "payload": {
+            "tipo_de_alerta": "panico",
+            "identificador_dispositivo": "BTN-011",
+            "user_context": "web"
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "citizen.report",
+        "event_id": "91b8a2f0-5a9e-4f12-8c8b-0a6b90d8f7a2",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "f0e1d2c3-b4a5-46c7-98d0-1e2f3a4b5c6d",
+        "trace_id": "7f6e5d4c-3b2a-4198-8f7e-6d5c4b3a2a10",
+        "timestamp": "2025-09-30T04:31:08.332Z",
+        "partition_key": "citizen.report",
+        "geo": {
+            "zone": "zone_5",
+            "lat": 14.634102,
+            "lon": -90.523115
+        },
+        "severity": "warning",
+        "payload": {
+            "tipo_evento": "accidente",
+            "mensaje_descriptivo": "Bache grande cerca de la parada de bus",
+            "origen": "app",
+            "ubicacion_aproximada": "zona_10"
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "sensor.speed",
+        "event_id": "9d2c0b1e-6f7a-4c1d-8e9f-0a1b2c3d4e5f",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "11aa22bb-33cc-44dd-88ee-99ff00aa11bb",
+        "trace_id": "b2d3e4f5-a6b7-48c9-80d1-e2f3a4b5c6d7",
+        "timestamp": "2025-09-30T04:31:10.047Z",
+        "partition_key": "sensor.speed",
+        "geo": {
+            "zone": "zone_3",
+            "lat": 14.621845,
+            "lon": -90.514902
+        },
+        "severity": "warning",
+        "payload": {
+            "velocidad_detectada": 82,
+            "sensor_id": "SPD-009",
+            "direccion": "OESTE"
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "sensor.acoustic",
+        "event_id": "ac7f1e2d-3c4b-5a6d-8e9f-1029384756aa",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "66778899-aabb-4ccd-8eff-001122334455",
+        "trace_id": "c1d2e3f4-a5b6-47c8-9d0e-1f2a3b4c5d6e",
+        "timestamp": "2025-09-30T04:31:12.593Z",
+        "partition_key": "sensor.acoustic",
+        "geo": {
+            "zone": "zone_4",
+            "lat": 14.626987,
+            "lon": -90.518221
+        },
+        "severity": "info",
+        "payload": {
+            "tipo_sonido_detectado": "sirena",
+            "nivel_decibeles": 86,
+            "probabilidad_evento_critico": 0.12
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "sensor.lpr",
+        "event_id": "e1f2a3b4-c5d6-4e7f-8091-a2b3c4d5e6f7",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "22bb33cc-44dd-55ee-99ff-00aa11bb22cc",
+        "trace_id": "8a9b0c1d-2e3f-4a5b-9c0d-1e2f3a4b5c6d",
+        "timestamp": "2025-09-30T04:31:14.109Z",
+        "partition_key": "sensor.lpr",
+        "geo": {
+            "zone": "zone_2",
+            "lat": 14.619441,
+            "lon": -90.510992
+        },
+        "severity": "critical",
+        "payload": {
+            "placa_vehicular": "M456BQP",
+            "velocidad_estimada": 96,
+            "modelo_vehiculo": "motocicleta",
+            "color_vehiculo": "negro",
+            "ubicacion_sensor": "calzada_roosevelt_05"
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "panic.button",
+        "event_id": "aa11bb22-cc33-44dd-88ee-ff0011223344",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "55cc66dd-77ee-4888-9900-aabbccddeeff",
+        "trace_id": "0a1b2c3d-4e5f-4607-890a-b1c2d3e4f5a6",
+        "timestamp": "2025-09-30T04:31:16.451Z",
+        "partition_key": "panic.button",
+        "geo": {
+            "zone": "zone_3",
+            "lat": 14.622331,
+            "lon": -90.516204
+        },
+        "severity": "warning",
+        "payload": {
+            "tipo_de_alerta": "incendio",
+            "identificador_dispositivo": "BTN-014",
+            "user_context": "movil"
+        }
+    },
+    {
+        "event_version": "1.0",
+        "event_type": "citizen.report",
+        "event_id": "bb22cc33-dd44-55ee-99ff-001122334455",
+        "producer": "python-simulation",
+        "source": "simulated",
+        "correlation_id": "aa00bb11-cc22-43dd-8eef-334455667788",
+        "trace_id": "6b7c8d9e-0f10-41a2-9b3c-4d5e6f7a8b9c",
+        "timestamp": "2025-09-30T04:31:18.029Z",
+        "partition_key": "citizen.report",
+        "geo": {
+            "zone": "zone_1",
+            "lat": 14.633518,
+            "lon": -90.514999
+        },
+        "severity": "info",
+        "payload": {
+            "tipo_evento": "accidente",
+            "mensaje_descriptivo": "Semáforo intermitente en cruce principal",
+            "ubicacion_aproximada": "zona_1",
+            "origen": "app"
+        }
+    }
+]

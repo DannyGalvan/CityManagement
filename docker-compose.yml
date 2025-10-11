@@ -1,0 +1,403 @@
+version: "3.9"
+
+name: monitoreo-stack
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: db-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-appuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-appsecret}
+      POSTGRES_DB: ${POSTGRES_DB:-alertsdb}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [labnet] 
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: ui-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [labnet]
+
+  redis:
+    image: redis:7-alpine
+    container_name: cache-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [labnet]
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-ui
+    environment:
+      - REDIS_HOSTS=local:cache-redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [labnet]
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: ui-redisinsight
+    restart: unless-stopped
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [labnet]
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    container_name: ui-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-grafana}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-grafana123}
+      GF_INSTALL_PLUGINS: "redis-datasource"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks: [labnet]
+
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    container_name: es01
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-elastic123}
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD:-kibana123}  
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - ingest.geoip.downloader.enabled=false
+      - xpack.security.enrollment.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9200 >/dev/null 2>&1 || curl -fsS http://localhost:9200 >/dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 40
+      start_period: 90s
+    networks: [labnet]
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.14.3
+    container_name: kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+      - ELASTICSEARCH_USERNAME=kibana_system     
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD:-kibana123}  
+      - SERVER_PUBLICBASEURL=http://localhost:5601
+    ports:
+      - "5601:5601"
+    depends_on:
+      es01:
+        condition: service_started
+    networks: [labnet]
+
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: kafka
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+
+      # Listeners: interno (PLAINTEXT) y host (PLAINTEXT_HOST)
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:9094,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
+    ports:
+      - "9094:9094"  # para clientes en el host
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/bin/kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [labnet]
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on: [kafka]
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092  # intra-Docker
+    ports:
+      - "8085:8080"
+    networks: [labnet]
+
+  kcat:
+    image: edenhill/kcat:1.7.1
+    container_name: kcat
+    depends_on: [kafka]
+    entrypoint: ["sh", "-c", "tail -f /dev/null"]
+    networks: [labnet]
+
+  airflow-init:
+    image: apache/airflow:2.10.2
+    container_name: airflow-init
+    command: >
+      bash -c "airflow db init &&
+               airflow users create --firstname Airflow --lastname Admin --username admin --password admin --role Admin --email admin@example.com || true"
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://cache-redis:6379/1
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        apache-airflow-providers-apache-kafka==1.10.4
+        confluent-kafka==2.11.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+    networks: [labnet]
+
+  airflow-webserver:
+    image: apache/airflow:2.10.2
+    container_name: airflow-web
+    restart: unless-stopped
+    command: webserver
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://cache-redis:6379/1
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        apache-airflow-providers-apache-kafka==1.10.4
+        confluent-kafka==2.11.1
+    depends_on:
+      postgres:
+        condition: service_healthy     # <<< ajustado
+      redis:
+        condition: service_started     # <<< ajustado
+      airflow-scheduler:
+        condition: service_started
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/logs:/opt/airflow/logs
+    networks: [labnet]
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.2
+    container_name: airflow-scheduler
+    restart: unless-stopped
+    command: scheduler
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://cache-redis:6379/1
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        apache-airflow-providers-apache-kafka==1.10.4
+        confluent-kafka==2.11.1
+    depends_on:
+      postgres:
+        condition: service_healthy     # <<< ajustado
+      redis:
+        condition: service_started     # <<< ajustado
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/logs:/opt/airflow/logs
+    networks: [labnet]
+
+  airflow-triggerer:
+    image: apache/airflow:2.10.2
+    container_name: airflow-triggerer
+    restart: unless-stopped
+    command: triggerer
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        apache-airflow-providers-apache-kafka==1.10.4
+        confluent-kafka==2.11.1
+    depends_on:
+      postgres:
+        condition: service_healthy     # <<< ajustado
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+    networks: [labnet]
+
+  airflow-worker:
+    image: apache/airflow:2.10.2
+    container_name: airflow-worker
+    restart: unless-stopped
+    command: celery worker
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://cache-redis:6379/1
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        apache-airflow-providers-apache-kafka==1.10.4
+        confluent-kafka==2.11.1
+    depends_on:
+      postgres:
+        condition: service_healthy     # <<< ajustado
+      redis:
+        condition: service_started     # <<< ajustado
+      airflow-scheduler:
+        condition: service_started
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+    networks: [labnet]
+
+  airflow-flower:
+    image: apache/airflow:2.10.2
+    container_name: airflow-flower
+    restart: unless-stopped
+    command: celery flower
+    ports:
+      - "5555:5555"
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://cache-redis:6379/1
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        apache-airflow-providers-apache-kafka==1.10.4
+        confluent-kafka==2.11.1
+    depends_on:
+      postgres:
+        condition: service_healthy     # <<< ajustado
+      redis:
+        condition: service_started     # <<< ajustado
+    networks: [labnet]
+
+  city-producer:
+    build:
+      context: .
+      dockerfile: CityProducer/Dockerfile
+    container_name: city-producer
+    restart: unless-stopped
+    ports:
+      - "5000:8080"    # Accedes desde http://localhost:5000
+      - "5001:8081"    # Accedes desde http://localhost:5001
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=CityManagement;Username=appuser;Password=appsecret"
+      Kafka__BootstrapServers: "kafka:9092"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./CityProducer/logs:/app/logs
+    networks: [labnet]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  city-consumer:
+    build:
+      context: .
+      dockerfile: CityConsumer/Dockerfile
+    container_name: city-consumer
+    restart: unless-stopped
+    ports:
+      - "5002:8080"    # Accedes desde http://localhost:5002
+      - "5003:8081"    # Accedes desde http://localhost:5003
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=CityManagement;Username=appuser;Password=appsecret"
+      Kafka__BootstrapServers: "kafka:9092"
+      Redis__Host: "cache-redis"
+      Redis__Port: "6379"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./CityConsumer/logs:/app/logs
+    networks: [labnet]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+
+volumes:
+  pgdata:
+  redisdata:
+  redisinsight:
+  grafanadata:
+  esdata:
+  kafka_data:
+
+networks:
+  labnet: {}

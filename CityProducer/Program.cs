@@ -33,7 +33,7 @@ namespace CityProducer
             builder.Services.AddControllers();
             builder.Services.AddSingleton<IProducerService, ProducerService>();
             builder.Services.AddScoped<IValidator<EventsRequest>, CreateEventValidator>();
-            builder.Services.AddScoped<IValidator<BulkEvents>, BulkEventValidator>();
+            builder.Services.AddScoped<IValidator<List<EventsRequest>>, BulkEventValidator>();
 
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -44,11 +44,8 @@ namespace CityProducer
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
             app.UseHttpsRedirection();
 
