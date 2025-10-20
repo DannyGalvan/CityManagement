@@ -143,21 +143,51 @@ services:
       es01:
         condition: service_started
     networks: [labnet]
+  
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.14.3
+    container_name: logstash
+    restart: unless-stopped
+    environment:
+      LS_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-elastic123}
+
+      # 🔧 Fuerza a que use es01 (coincide con tu servicio)
+      ELASTICSEARCH_HOSTS: "http://es01:9200"
+
+      # 🔇 Evita que el licensechecker intente conectar a un ES “default”
+      XPACK_MONITORING_ENABLED: "false"
+    depends_on:
+      es01:
+        condition: service_started
+    user: "0:0"   # evita 'Permission denied' leyendo /var/lib/docker/containers
+    volumes:
+      - ./logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    ports:
+      - "9600:9600"   # opcional: API de estado
+    networks: [labnet]
+
+
 
   kafka:
-    image: bitnami/kafka:3.7
+    image: confluentinc/cp-kafka:5.5.1
     container_name: kafka
     environment:
-      - KAFKA_ENABLE_KRAFT=yes
-      - KAFKA_CFG_NODE_ID=1
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # ====== REQUERIDO por cp-kafka 5.5.1 ======
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_BROKER_ID=1
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9094
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
 
-      # Listeners: interno (PLAINTEXT) y host (PLAINTEXT_HOST)
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:9094,CONTROLLER://:9093
+      # ====== (Tus variables existentes; las dejo) ======
+      # OJO: estas KAFKA_CFG_* no molestan, pero cp-kafka 5.5.1
+      # realmente usa las KAFKA_* de arriba.
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:9094
       - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
 
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
@@ -165,9 +195,12 @@ services:
       - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
       - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
     ports:
-      - "9094:9094"  # para clientes en el host
+      - "9094:9094"
     volumes:
       - kafka_data:/bitnami/kafka
+    depends_on:
+      zookeeper:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "/usr/bin/kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
       interval: 10s
@@ -191,6 +224,17 @@ services:
     container_name: kcat
     depends_on: [kafka]
     entrypoint: ["sh", "-c", "tail -f /dev/null"]
+    networks: [labnet]
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:5.5.1
+    container_name: zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
     networks: [labnet]
 
   airflow-init:
