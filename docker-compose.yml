@@ -1,5 +1,3 @@
-version: "3.9"
-
 name: monitoreo-stack
 
 services:
@@ -32,6 +30,8 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
     ports:
       - "5050:80"
+    volumes:
+      - pgadmin:/var/lib/pgadmin
     depends_on:
       postgres:
         condition: service_healthy
@@ -164,30 +164,25 @@ services:
     volumes:
       - ./logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - logs:/app/logs
     ports:
       - "9600:9600"   # opcional: API de estado
     networks: [labnet]
 
-
-
   kafka:
-    image: confluentinc/cp-kafka:5.5.1
+    image: bitnami/kafka:3.7
     container_name: kafka
     environment:
-      # ====== REQUERIDO por cp-kafka 5.5.1 ======
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_BROKER_ID=1
-      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9094
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
 
-      # ====== (Tus variables existentes; las dejo) ======
-      # OJO: estas KAFKA_CFG_* no molestan, pero cp-kafka 5.5.1
-      # realmente usa las KAFKA_* de arriba.
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:9094
+      # Listeners: interno (PLAINTEXT) y host (PLAINTEXT_HOST)
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:9094,CONTROLLER://:9093
       - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
 
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=false
@@ -195,12 +190,9 @@ services:
       - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
       - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
     ports:
-      - "9094:9094"
+      - "9094:9094"  # para clientes en el host
     volumes:
       - kafka_data:/bitnami/kafka
-    depends_on:
-      zookeeper:
-        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "/usr/bin/kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
       interval: 10s
@@ -212,6 +204,8 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     depends_on: [kafka]
+    volumes:
+      - ./kafka-ui/application.yml:/app/application.yml:ro
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092  # intra-Docker
@@ -386,7 +380,6 @@ services:
     restart: unless-stopped
     ports:
       - "5000:8080"    # Accedes desde http://localhost:5000
-      - "5001:8081"    # Accedes desde http://localhost:5001
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=CityManagement;Username=appuser;Password=appsecret"
@@ -395,7 +388,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./CityProducer/logs:/app/logs
+      - logs:/app/logs
     networks: [labnet]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health || exit 1"]
@@ -412,7 +405,6 @@ services:
     restart: unless-stopped
     ports:
       - "5002:8080"    # Accedes desde http://localhost:5002
-      - "5003:8081"    # Accedes desde http://localhost:5003
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=CityManagement;Username=appuser;Password=appsecret"
@@ -425,7 +417,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./CityConsumer/logs:/app/logs
+      - logs:/app/logs
     networks: [labnet]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health || exit 1"]
@@ -437,11 +429,14 @@ services:
 
 volumes:
   pgdata:
+  pgadmin:
   redisdata:
   redisinsight:
   grafanadata:
   esdata:
   kafka_data:
+  kafka-ui:
+  logs:
 
 networks:
   labnet: {}

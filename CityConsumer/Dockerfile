@@ -2,10 +2,13 @@
 
 # Esta fase se usa cuando se ejecuta desde VS en modo rápido (valor predeterminado para la configuración de depuración)
 FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
-USER $APP_UID
+#USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
+
+# ✅ Crear directorio de logs con permisos amplios
+RUN mkdir -p /app/logs && chmod 777 /app/logs
 
 
 # Esta fase se usa para compilar el proyecto de servicio
@@ -27,4 +30,11 @@ RUN dotnet publish "./CityConsumer.csproj" -c $BUILD_CONFIGURATION -o /app/publi
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# ✅ Asegurar que el directorio de logs existe y tiene permisos
+RUN mkdir -p /app/logs && chmod -R 777 /app/logs
+
+# ✅ Declarar volumen (opcional pero recomendado)
+VOLUME ["/app/logs"]
+
 ENTRYPOINT ["dotnet", "CityConsumer.dll"]
