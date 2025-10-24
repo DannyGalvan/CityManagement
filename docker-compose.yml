@@ -253,6 +253,7 @@ services:
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
+      - airflow_output:/opt/airflow/output
     networks: [labnet]
 
   airflow-webserver:
@@ -282,6 +283,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/plugins:/opt/airflow/plugins
       - ./airflow/logs:/opt/airflow/logs
+      - airflow_output:/opt/airflow/output
     networks: [labnet]
 
   airflow-scheduler:
@@ -307,6 +309,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/plugins:/opt/airflow/plugins
       - ./airflow/logs:/opt/airflow/logs
+      - airflow_output:/opt/airflow/output
     networks: [labnet]
 
   airflow-triggerer:
@@ -325,6 +328,7 @@ services:
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
+      - airflow_output:/opt/airflow/output
     networks: [labnet]
 
   airflow-worker:
@@ -350,6 +354,7 @@ services:
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
+      - airflow_output:/opt/airflow/output
     networks: [labnet]
 
   airflow-flower:
@@ -437,6 +442,7 @@ volumes:
   kafka_data:
   kafka-ui:
   logs:
+  airflow_output:
 
 networks:
   labnet: {}
